@@ -1,10 +1,11 @@
 package session
 
 import (
-	"github.com/imdario/mergo"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/imdario/mergo"
 )
 
 // Caps - user capabilities
@@ -37,6 +38,13 @@ type Caps struct {
 	SessionTimeout        string            `json:"sessionTimeout,omitempty"`
 	S3KeyPattern          string            `json:"s3KeyPattern,omitempty"`
 	ExtensionCapabilities *Caps             `json:"selenoid:options,omitempty"`
+}
+
+type Pod struct {
+	ID            string `json:"id"`
+	IPAddress     string `json:"ip"`
+	Name          string `json:"podname"`
+	ContainerName string `json:"containername"`
 }
 
 func (c *Caps) ProcessExtensionCapabilities() {
@@ -79,6 +87,7 @@ type Session struct {
 	TimeoutCh chan struct{}
 	Started   time.Time
 	Lock      sync.Mutex
+	Pod       *Pod
 }
 
 // HostPort - hold host-port values for all forwarded ports

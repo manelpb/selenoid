@@ -28,6 +28,8 @@ type Environment struct {
 	LogOutputDir         string
 	SaveAllLogs          bool
 	Privileged           bool
+	NameSpace            string
+	InKubernetes         bool
 }
 
 const (
@@ -45,6 +47,7 @@ type StartedService struct {
 	Url       *url.URL
 	Container *session.Container
 	HostPort  session.HostPort
+	Pod       *session.Pod
 	Cancel    func()
 }
 
@@ -69,14 +72,23 @@ type DefaultManager struct {
 func (m *DefaultManager) Find(caps session.Caps, requestId uint64) (Starter, bool) {
 	browserName := caps.BrowserName()
 	version := caps.Version
-	log.Printf("[%d] [LOCATING_SERVICE] [%s] [%s]", requestId, browserName, version)
-	service, version, ok := m.Config.Find(browserName, version)
+	platform := caps.Platform
+
+	log.Printf("[%d] [LOCATING_SERVICE] [%s] [%s] [%s]", requestId, browserName, version, platform)
+	service, version, ok := m.Config.Find(browserName, version, platform)
 	serviceBase := ServiceBase{RequestId: requestId, Service: service}
 	if !ok {
 		return nil, false
 	}
 	switch service.Image.(type) {
 	case string:
+		if m.Environment.InKubernetes {
+			log.Printf("[%d] [USING_KUBERNETES] [%s]", requestId, browserName)
+			return &Kubernetes{
+				ServiceBase: serviceBase,
+				Environment: *m.Environment,
+				Caps:        caps}, true
+		}
 		if m.Client == nil {
 			return nil, false
 		}

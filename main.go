@@ -62,6 +62,9 @@ var (
 	manager                  service.Manager
 	cli                      *client.Client
 
+	nameSpace               string
+	enableKubernetesSupport bool
+
 	startTime = time.Now()
 
 	version     bool
@@ -96,6 +99,10 @@ func init() {
 	flag.StringVar(&logOutputDir, "log-output-dir", "", "Directory to save session log to")
 	flag.BoolVar(&saveAllLogs, "save-all-logs", false, "Whether to save all logs without considering capabilities")
 	flag.DurationVar(&gracefulPeriod, "graceful-period", 300*time.Second, "graceful shutdown period in time.Duration format, e.g. 300s or 500ms")
+
+	flag.BoolVar(&enableKubernetesSupport, "enable-kubernetes-support", false, "Enable kubernetes support")
+	flag.StringVar(&nameSpace, "namespace", "default", "Kubernetes namespace for browsers")
+
 	flag.Parse()
 
 	if version {
@@ -170,7 +177,18 @@ func init() {
 		LogOutputDir:         logOutputDir,
 		SaveAllLogs:          saveAllLogs,
 		Privileged:           !disablePrivileged,
+
+		NameSpace:    nameSpace,
+		InKubernetes: enableKubernetesSupport,
 	}
+
+	if enableKubernetesSupport {
+		disableDocker = true
+		manager = &service.DefaultManager{Environment: &environment, Config: conf}
+		log.Println("[-] [INIT] [Selenoid is running with kubernetes support]")
+		return
+	}
+
 	if disableDocker {
 		manager = &service.DefaultManager{Environment: &environment, Config: conf}
 		if logOutputDir != "" && captureDriverLogs {

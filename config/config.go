@@ -9,9 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	"time"
+
 	"github.com/aerokube/selenoid/session"
 	"github.com/docker/docker/api/types/container"
-	"time"
 )
 
 // Session - session id and vnc flag
@@ -50,6 +51,7 @@ type State struct {
 
 // Browser configuration
 type Browser struct {
+	Platform        string            `json:"platform,omitempty"`
 	Image           interface{}       `json:"image"`
 	Port            string            `json:"port"`
 	Path            string            `json:"path"`
@@ -63,6 +65,13 @@ type Browser struct {
 	Mem             string            `json:"mem,omitempty"`
 	Cpu             string            `json:"cpu,omitempty"`
 	PublishAllPorts bool              `json:"publishAllPorts,omitempty"`
+	Requirements    Resourses         `json:"resources,omitempty"`
+}
+
+// Resourses configuration for pod
+type Resourses struct {
+	Limits   map[string]string `json:"limits,omitempty"`
+	Requests map[string]string `json:"requests,omitempty"`
 }
 
 // Versions configuration
@@ -120,7 +129,7 @@ func (config *Config) Load(browsers, containerLogs string) error {
 }
 
 // Find - find concrete browser
-func (config *Config) Find(name string, version string) (*Browser, string, bool) {
+func (config *Config) Find(name string, version string, platform string) (*Browser, string, bool) {
 	config.lock.RLock()
 	defer config.lock.RUnlock()
 	browser, ok := config.Browsers[name]
@@ -135,7 +144,10 @@ func (config *Config) Find(name string, version string) (*Browser, string, bool)
 		}
 	}
 	for v, b := range browser.Versions {
-		if strings.HasPrefix(v, version) {
+		if platform != "" && strings.HasPrefix(v, version) && b.Platform == platform {
+			log.Printf("%s", b.Platform)
+			return b, v, true
+		} else if strings.HasPrefix(v, version) {
 			return b, v, true
 		}
 	}

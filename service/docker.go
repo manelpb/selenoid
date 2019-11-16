@@ -3,12 +3,17 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/docker/go-units"
 	"log"
 	"net"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/docker/go-units"
+
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/aerokube/selenoid/config"
 	"github.com/aerokube/selenoid/session"
@@ -20,9 +25,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 const (

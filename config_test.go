@@ -129,7 +129,7 @@ func TestConfigFindMissingBrowser(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	_, _, ok := conf.Find("firefox", "")
+	_, _, ok := conf.Find("firefox", "", "")
 	AssertThat(t, ok, Is{false})
 }
 
@@ -139,7 +139,7 @@ func TestConfigFindDefaultVersionError(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	_, _, ok := conf.Find("firefox", "")
+	_, _, ok := conf.Find("firefox", "", "")
 	AssertThat(t, ok, Is{false})
 }
 
@@ -149,7 +149,7 @@ func TestConfigFindDefaultVersion(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	_, v, ok := conf.Find("firefox", "")
+	_, v, ok := conf.Find("firefox", "", "")
 	AssertThat(t, ok, Is{false})
 	AssertThat(t, v, EqualTo{"49.0"})
 }
@@ -160,7 +160,7 @@ func TestConfigFindFoundByEmptyPrefix(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	_, v, ok := conf.Find("firefox", "")
+	_, v, ok := conf.Find("firefox", "", "")
 	AssertThat(t, ok, Is{true})
 	AssertThat(t, v, EqualTo{"49.0"})
 }
@@ -171,7 +171,7 @@ func TestConfigFindFoundByPrefix(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	_, v, ok := conf.Find("firefox", "49")
+	_, v, ok := conf.Find("firefox", "49", "")
 	AssertThat(t, ok, Is{true})
 	AssertThat(t, v, EqualTo{"49.0"})
 }
@@ -182,9 +182,39 @@ func TestConfigFindFoundByMatch(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	_, v, ok := conf.Find("firefox", "49.0")
+	_, v, ok := conf.Find("firefox", "49.0", "")
 	AssertThat(t, ok, Is{true})
 	AssertThat(t, v, EqualTo{"49.0"})
+}
+
+func TestConfigFindFoundWithPlatform(t *testing.T) {
+	confFile := configfile(`
+	{
+		"firefox":{
+			"default":"49.0_WIN10",
+			"versions":{
+				"49.0_WIN10":{
+					"platform: "WIN10",
+					"image":"image",
+					"port":"5555", 
+					"path":"/"
+				},
+				"49.0_MAC":{
+					"platform: "MAC",
+					"image":"image",
+					"port":"5555", 
+					"path":"/"
+				}
+			}
+		}
+	}`)
+	defer os.Remove(confFile)
+	conf := config.NewConfig()
+	conf.Load(confFile, testLogConf)
+
+	_, v, ok := conf.Find("firefox", "49.0", "WIN10")
+	AssertThat(t, ok, Is{true})
+	AssertThat(t, v, EqualTo{"49.0_WIN10"})
 }
 
 func TestConfigFindImage(t *testing.T) {
@@ -193,7 +223,7 @@ func TestConfigFindImage(t *testing.T) {
 	conf := config.NewConfig()
 	conf.Load(confFile, testLogConf)
 
-	b, v, ok := conf.Find("firefox", "49.0")
+	b, v, ok := conf.Find("firefox", "49.0", "")
 	AssertThat(t, ok, Is{true})
 	AssertThat(t, v, EqualTo{"49.0"})
 	AssertThat(t, b.Image, EqualTo{"image"})
@@ -225,7 +255,7 @@ func TestConfigConcurrentLoadAndRead(t *testing.T) {
 	}
 	done := make(chan string)
 	go func() {
-		browser, _, _ := conf.Find("firefox", "")
+		browser, _, _ := conf.Find("firefox", "", "")
 		done <- browser.Tmpfs["/tmp"]
 	}()
 	conf.Load(confFile, testLogConf)
@@ -242,11 +272,11 @@ func TestConfigConcurrentRead(t *testing.T) {
 	}
 	done := make(chan string)
 	go func() {
-		browser, _, _ := conf.Find("firefox", "")
+		browser, _, _ := conf.Find("firefox", "", "")
 		done <- browser.Tmpfs["/tmp"]
 	}()
 	go func() {
-		browser, _, _ := conf.Find("firefox", "")
+		browser, _, _ := conf.Find("firefox", "", "")
 		done <- browser.Tmpfs["/tmp"]
 	}()
 	<-done
